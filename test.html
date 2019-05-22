@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Page Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    
+</body>
+<script>
+//     let request = {
+//         log(){
+//             console.log(1111);
+//         }
+//     };
+//     let a = Object.create(request);
+//     console.log('a:',a);
+//     // a.log();
+
+//     const person = {
+//   isHuman: false,
+//   printIntroduction: function () {
+//     console.log(`My name is ${this.name}. Am I human? ${this.isHuman}`);
+//   }
+// };
+
+// const me = Object.create(person);
+// console.log('me:',me);
+// // me.name = "Matthew"; // "name" is a property set on "me", but not on "person"
+// // me.isHuman = true; // inherited properties can be overwritten
+
+// me.printIntroduction();
+
+
+function compose (middleware) {
+  // 传入的 middleware 必须是一个数组, 否则报错
+  if (!Array.isArray(middleware)) throw new TypeError('Middleware stack must be an array!')
+  // 循环遍历传入的 middleware， 每一个元素都必须是函数，否则报错
+  for (const fn of middleware) {
+    if (typeof fn !== 'function') throw new TypeError('Middleware must be composed of functions!')
+  }
+
+  /**
+   * @param {Object} context
+   * @return {Promise}
+   * @api public
+   */
+  // 正如我们前面说的， compose 函数会返回一个函数
+  // 记住，compose 会返回一个函数，这个函数接受两个参数 context, next
+  return function (context, next) {
+    // last called middleware #
+    let index = -1
+    // debugger
+    return dispatch(0)
+    function dispatch (i) {
+    //   debugger
+      if (i <= index) return Promise.reject(new Error('next() called multiple times'))
+      index = i
+      let fn = middleware[i]
+      // 已经取完了所有中间件
+      // 这个时候还会进来一次，然后把 fn 变成 next
+      // 在这里面 next 没有传，所以 fn = next = undefined
+      // 直接 resolve 掉
+      if (i === middleware.length) fn = next
+      if (!fn) return Promise.resolve()
+      try {
+        return Promise.resolve(fn(context, function next () {
+          return dispatch(i + 1)
+        }))
+      } catch (err) {
+        return Promise.reject(err)
+      }
+    }
+  }
+}
+
+const ctx = {
+  onerror: (err) => {
+    console.log(err, 'err')
+  }
+}
+
+const middleware = [async (ctx, next) => {
+  console.log(ctx, next, '1')
+  await next()
+}, async (ctx, next) => {
+  console.log(ctx, next, '2')
+  await next()
+}, async (ctx, next) => {
+  console.log(ctx, next, '3')
+  await next()
+}]
+
+// fn 接受两个参数，一个ctx， 一个 next
+const fn = compose(middleware)
+console.log('fn:',fn);
+const onerror = err => ctx.onerror(err)
+const handleResponse = () => console.log(ctx)
+
+fn(ctx).then(handleResponse).catch(onerror);
+
+
+function tail (i) {
+    if (i > 2) {
+        return;
+    }
+    console.log('before',i);
+    tail(i + 1);
+    console.log('after',i);
+}
+tail(0);
+
+
+function a () {
+    console.log('1');
+    (function (){
+        console.log('2');
+        (function (){
+            console.log('3');
+            console.log('333');
+        })()
+        console.log('222');
+    })()
+    console.log('111');
+}
+a();
+</script>
+</html>
